@@ -128,7 +128,7 @@ int tree_move(Tree* tree, const char* source, const char* target) {
         Tree* source_parent_tree = tree_find(tree, source_parent_path);
         char* target_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
         CHECK_PTR(target_name);
-        char* target_parent_path = make_path_to_parent(source, target_name);
+        char* target_parent_path = make_path_to_parent(target, target_name);
         Tree* target_parent_tree = tree_find(tree, target_parent_path);
         if (source_parent_tree && target_parent_tree) {
             Tree* to_move = hmap_get(source_parent_tree->subfolders, source_name);
@@ -136,6 +136,7 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 if (hmap_get(target_parent_tree->subfolders, target_name) == NULL) {
                     hmap_remove(source_parent_tree->subfolders, source_name);
                     hmap_insert(target_parent_tree->subfolders, target_name, to_move);
+                    return 0;
                 }
                 return EEXIST;
             }
