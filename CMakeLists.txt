@@ -3,7 +3,7 @@ project(MIMUW-FORK C)
 
 #set(CMAKE_CXX_STANDARD "17")
 set(CMAKE_C_STANDARD "11")
-set(CMAKE_C_FLAGS "-g -Wall -Wextra -Wno-sign-compare")
+set(CMAKE_C_FLAGS "-g -Wall -Wextra -Wno-sign-compare -fsanitize=undefined -fsanitize=address -g")
 
 add_library(err err.c)
 add_library(HashMap HashMap.c)
