@@ -1,6 +1,7 @@
 #include "Tree.h"
 #include "HashMap.h"
 #include "path_utils.h"
+#include "ReadWriteLock.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 
 struct Tree {
     HashMap* subfolders;
+    ReadWriteLock lock;
 };
 
 Tree* tree_new() {

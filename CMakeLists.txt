@@ -8,7 +8,7 @@ set(CMAKE_C_FLAGS "-g -Wall -Wextra -Wno-sign-compare -fsanitize=undefined -fsan
 add_library(err err.c)
 add_library(HashMap HashMap.c)
 add_library(path_utils path_utils.c)
-add_library(Tree path_utils.c Tree.c)
+add_library(Tree path_utils.c ReadWriteLock.c Tree.c)
 #add_executable(main main.c)
 include("${CMAKE_CURRENT_SOURCE_DIR}/testy-zad2/CMakeExtension.txt")
 target_link_libraries(main Tree HashMap err pthread)
