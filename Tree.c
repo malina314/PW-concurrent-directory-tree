@@ -134,50 +134,25 @@ int tree_move(Tree* tree, const char* source, const char* target) {
         char* source_parent_path = make_path_to_parent(source, source_name);
         Tree* source_parent_tree = tree_find(tree, source_parent_path);
         if (source_parent_tree) {
-            if (strcmp(target, "/") == 0) {
-                return EEXIST;
-//                // todo: zrobić ten special case
-//                Tree *source_tree = hmap_get(source_parent_tree->subfolders, source_name);
-//                if (source_tree) {
-//                    const char *key;
-//                    void *subtree;
-//                    HashMapIterator it = hmap_iterator(source_tree->subfolders);
-//                    while (hmap_next(source_tree->subfolders, &it, &key, &subtree)) {
-//                        if (hmap_get(tree->subfolders, key) != NULL) {
-//                            return EEXIST;
-//                        }
-//                    }
-//                    it = hmap_iterator(source_tree->subfolders);
-//                    while (hmap_next(source_tree->subfolders, &it, &key, &subtree)) {
-//                        //                    hmap_remove(source_tree->subfolders, key);
-//                        hmap_insert(tree->subfolders, key, subtree);
-//                    }
-//                    // todo: jeszcze kurwa z parenta trzeba usunąć !!!! jprdl jakie to jest gówno
-//                    tree_free(source_tree);
-//                    hmap_remove(source_parent_tree->subfolders, source_name);
-//                    return 0;
-//                }
-            } else {
-                char *target_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-                CHECK_PTR(target_name);
-                char *target_parent_path = make_path_to_parent(target, target_name);
-                Tree *target_parent_tree = tree_find(tree, target_parent_path);
-                if (target_parent_tree) {
-                    Tree *to_move = hmap_get(source_parent_tree->subfolders, source_name);
-                    if (to_move) {
-                        if (strcmp(source, target) == 0) {
-                            return 0;
-                        }
-                        if (is_prefix(source, target)) {
-                            return EINVALIDTARGET;
-                        }
-                        if (hmap_get(target_parent_tree->subfolders, target_name) == NULL) {
-                            hmap_remove(source_parent_tree->subfolders, source_name);
-                            hmap_insert(target_parent_tree->subfolders, target_name, to_move);
-                            return 0;
-                        }
+            char *target_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
+            CHECK_PTR(target_name);
+            char *target_parent_path = make_path_to_parent(target, target_name);
+            Tree *target_parent_tree = tree_find(tree, target_parent_path);
+            if (target_parent_tree) {
+                Tree *to_move = hmap_get(source_parent_tree->subfolders, source_name);
+                if (to_move) {
+                    if (strcmp(source, target) == 0) {
+                        return 0;
+                    }
+                    if (is_prefix(source, target)) {
+                        return EINVALIDTARGET;
+                    }
+                    if (hmap_get(target_parent_tree->subfolders, target_name) != NULL) {
                         return EEXIST;
                     }
+                    hmap_remove(source_parent_tree->subfolders, source_name);
+                    hmap_insert(target_parent_tree->subfolders, target_name, to_move);
+                    return 0;
                 }
             }
         }
