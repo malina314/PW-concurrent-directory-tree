@@ -1,3 +1,10 @@
+// todo: komentarz
+// autor: Mateusz Malinowski (mm429561)
+// W zadaniu występuje problem analogiczny jak "czytelnicy i pisarze". Rolę
+// czytelników pełnią funkcje `tree_list` i `tree_find`, a rolę pisarzy
+// `tree_create`, `tree_remove` i `tree_move`. Do synchronizacji używam zamków,
+// podobnie jak w małym zadaniu nr 8.
+
 #include "Tree.h"
 #include "HashMap.h"
 #include "path_utils.h"
@@ -20,7 +27,8 @@
         }                   \
     } while (0)
 
-typedef struct  {
+// Struktura reprezentująca węzeł drzewa.
+typedef struct {
     HashMap* subfolders;
     ReadWriteLock lock;
 } TreeNode;
@@ -32,6 +40,7 @@ struct Tree {
     pthread_mutex_t move_mutex;
 };
 
+// Tworzy nowy węzeł drzewa.
 static inline TreeNode* tree_new_node() {
     TreeNode* node = malloc(sizeof (Tree));
     CHECK_PTR(node);
@@ -51,6 +60,7 @@ Tree* tree_new() {
     return tree;
 }
 
+// Zwalnia całą pamięć związaną z danym węzłem.
 static inline void tree_free_node(TreeNode* tree_node) {
     const char* key;
     void* subtree;
