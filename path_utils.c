@@ -96,6 +96,7 @@ char* make_map_contents_string(HashMap* map)
 
     // Return empty string if map is empty.
     if (!result_size) {
+        free(keys);
         // Note we can't just return "", as it can't be free'd.
         char* result = malloc(1);
         *result = '\0';
