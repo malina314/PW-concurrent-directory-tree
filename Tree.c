@@ -219,9 +219,13 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 pthread_mutex_lock(&tree->move_mutex);
                 // todo: zakleszcza się gdy source_parent_tree == target_parent_tree
                 rwlock_before_write(&source_parent_tree->lock);
-                rwlock_before_write(&target_parent_tree->lock);
+                if (source_parent_tree != target_parent_tree) {
+                    rwlock_before_write(&target_parent_tree->lock);
+                }
                 int return_value = 0;
                 if (to_move) {
+                    // todo: Jeśli folder target już istnieje, zwraca kod błędu EEXIST.
+                    //  może jednak to nie jest poprawne?
                     if (strcmp(source, target) == 0) {
                         return_value = 0;
                     } else if (is_prefix(source, target)) {
@@ -237,7 +241,9 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 }
                 //todo: obsługa błędów
                 rwlock_after_write(&target_parent_tree->lock);
-                rwlock_after_write(&source_parent_tree->lock);
+                if (source_parent_tree != target_parent_tree) {
+                    rwlock_after_write(&source_parent_tree->lock);
+                }
                 pthread_mutex_unlock(&tree->move_mutex);
                 return return_value;
             }
