@@ -2,7 +2,7 @@
 
 #include <pthread.h>
 
-int init(ReadWriteLock *rw) {
+int rwlock_init(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_mutex_init(&rw->mutex, 0)) != 0)
         return err;
@@ -14,7 +14,7 @@ int init(ReadWriteLock *rw) {
     return 0;
 }
 
-int destroy(ReadWriteLock *rw) {
+int rwlock_destroy(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_cond_destroy(&rw->readers)) != 0)
         return err;
@@ -25,7 +25,7 @@ int destroy(ReadWriteLock *rw) {
     return 0;
 }
 
-int before_write(ReadWriteLock *rw) {
+int rwlock_before_write(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_mutex_lock(&rw->mutex)) != 0)
         return err;
@@ -45,7 +45,7 @@ int before_write(ReadWriteLock *rw) {
     return 0;
 }
 
-int after_write(ReadWriteLock *rw) {
+int rwlock_after_write(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_mutex_lock(&rw->mutex)) != 0)
         return err;
@@ -65,7 +65,7 @@ int after_write(ReadWriteLock *rw) {
     return 0;
 }
 
-int before_read(ReadWriteLock *rw) {
+int rwlock_before_read(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_mutex_lock(&rw->mutex)) != 0)
         return err;
@@ -90,7 +90,7 @@ int before_read(ReadWriteLock *rw) {
     return 0;
 }
 
-int after_read(ReadWriteLock *rw) {
+int rwlock_after_read(ReadWriteLock *rw) {
     int err;
     if ((err = pthread_mutex_lock(&rw->mutex)) != 0)
         return err;

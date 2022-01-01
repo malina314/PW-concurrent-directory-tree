@@ -11,4 +11,14 @@ typedef struct {
     int change;
 } ReadWriteLock;
 
-// todo: sygnatury ale najpierw je zmienic
+int rwlock_init(ReadWriteLock *rw);
+
+int rwlock_destroy(ReadWriteLock *rw);
+
+int rwlock_before_write(ReadWriteLock *rw);
+
+int rwlock_after_write(ReadWriteLock *rw);
+
+int rwlock_before_read(ReadWriteLock *rw);
+
+int rwlock_after_read(ReadWriteLock *rw);
