@@ -138,6 +138,7 @@ int tree_create(Tree* tree, const char* path) {
                 rwlock_after_write(&tree_node->lock);
                 return 0;
             }
+            rwlock_after_write(&tree_node->lock);
             return EEXIST;
         }
         return ENOENT;
@@ -160,13 +161,23 @@ int tree_remove(Tree* tree, const char* path) {
             rwlock_after_read(&tree_node->lock); // Zwalniamy zamek z `tree_find`.
             rwlock_before_write(&tree_node->lock);
             if (to_remove) {
+                // Usuwamy krawędź, żeby nikt więcej nie wszedł to `to_remove`.
+                hmap_remove(tree_node->subfolders, subfolder_to_remove);
+                rwlock_before_write(&to_remove->lock);
+                // Mamy zamek i nikt więcej nie wejdzie, więc nikt nie czeka na
+                // żadnej zmiennej warunkowej.
+                // todo: czy na pewno żaden czytelnik nie czeka?
                 if (hmap_size(to_remove->subfolders) == 0) {
                     hmap_free(to_remove->subfolders);
+                    rwlock_after_write(&to_remove->lock);
+                    rwlock_destroy(&to_remove->lock);
                     free(to_remove);
-                    hmap_remove(tree_node->subfolders, subfolder_to_remove);
                     rwlock_after_write(&tree_node->lock);
                     return 0;
                 }
+                // Nie mogliśmy usunąć, więc przywracamy usuniętą krawędź.
+                hmap_insert(tree_node->subfolders, subfolder_to_remove, to_remove);
+                rwlock_after_write(&to_remove->lock);
                 rwlock_after_write(&tree_node->lock);
                 return ENOTEMPTY;
             }
@@ -203,12 +214,12 @@ int tree_move(Tree* tree, const char* source, const char* target) {
             if (target_parent_tree) {
                 TreeNode* to_move = hmap_get(source_parent_tree->subfolders, source_name);
                 //todo: obsługa błędów
-                pthread_mutex_lock(&tree->move_mutex);
-                    // todo: jeżeli target == source to się chyba zakleszczy
-                rwlock_before_write(&source_parent_tree->lock);
-                rwlock_before_write(&target_parent_tree->lock);
                 rwlock_after_read(&source_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
                 rwlock_after_read(&target_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
+                pthread_mutex_lock(&tree->move_mutex);
+                // todo: zakleszcza się gdy source_parent_tree == target_parent_tree
+                rwlock_before_write(&source_parent_tree->lock);
+                rwlock_before_write(&target_parent_tree->lock);
                 int return_value = 0;
                 if (to_move) {
                     if (strcmp(source, target) == 0) {
@@ -230,6 +241,7 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 pthread_mutex_unlock(&tree->move_mutex);
                 return return_value;
             }
+            rwlock_after_read(&source_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
         }
         return ENOENT;
     }
