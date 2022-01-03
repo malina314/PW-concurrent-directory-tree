@@ -17,6 +17,7 @@ void syserr(const char* fmt, ...)
     va_start(fmt_args, fmt);
     vfprintf(stderr, fmt, fmt_args);
     va_end(fmt_args);
+
     fprintf(stderr, " (%d; %s)\n", errno, strerror(errno));
     exit(1);
 }

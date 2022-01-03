@@ -10,6 +10,7 @@
 #include "HashMap.h"
 #include "path_utils.h"
 #include "ReadWriteLock.h"
+#include "err.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -19,14 +20,6 @@
 
 // Błąd oznaczający, że `target` jest w poddrzewie `source`.
 #define EINVALIDTARGET -1
-
-// Sprawdza, czy alokacja się powiodła. W przypadku błędu kończy program z kodem 1.
-#define CHECK_PTR(p)        \
-    do {                    \
-        if (p == NULL) {    \
-            exit(1);        \
-        }                   \
-    } while (0)
 
 // Struktura reprezentująca węzeł drzewa.
 typedef struct {

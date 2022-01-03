@@ -1,4 +1,5 @@
 #include "path_utils.h"
+#include "err.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -51,6 +52,7 @@ char* make_path_to_parent(const char* path, char* component)
 
     size_t subpath_len = p - path + 1; // Include '/' at p.
     char* result = malloc(subpath_len + 1); // Include terminating null character.
+    CHECK_PTR(result);
     strncpy(result, path, subpath_len);
     result[subpath_len] = '\0';
 
@@ -75,6 +77,7 @@ const char** make_map_contents_array(HashMap* map)
 {
     size_t n_keys = hmap_size(map);
     const char** result = calloc(n_keys + 1, sizeof(char*));
+    CHECK_PTR(result);
     HashMapIterator it = hmap_iterator(map);
     const char** key = result;
     void* value = NULL;
@@ -99,11 +102,13 @@ char* make_map_contents_string(HashMap* map)
         free(keys);
         // Note we can't just return "", as it can't be free'd.
         char* result = malloc(1);
+        CHECK_PTR(result);
         *result = '\0';
         return result;
     }
 
     char* result = malloc(result_size);
+    CHECK_PTR(result);
     char* position = result;
     for (const char** key = keys; *key; ++key) {
         size_t keylen = strlen(*key);
