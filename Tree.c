@@ -38,18 +38,17 @@ static inline TreeNode* tree_new_node() {
     CHECK_PTR(node);
     node->subfolders = hmap_new();
     CHECK_PTR(node->subfolders);
-    //todo: obsługa błędu
-    rwlock_init(&node->lock);
+    if (rwlock_init(&node->lock) != 0) {
+        syserr("syserr occurred");
+    }
     return node;
 }
 
 Tree* tree_new() {
     Tree* tree = malloc(sizeof (Tree));
     CHECK_PTR(tree);
-    //todo: może lepsza obsługa błędu?
     if (pthread_mutex_init(&tree->move_mutex, NULL) != 0) {
-        free(tree);
-        return NULL;
+        syserr("syserr occurred");
     }
     tree->root = tree_new_node();
     return tree;
@@ -64,15 +63,17 @@ static inline void tree_free_node(TreeNode* tree_node) {
      tree_free_node(subtree);
     }
     free(tree_node->subfolders);
-    //todo: obsługa błędu
-    rwlock_destroy(&tree_node->lock);
+    if (rwlock_destroy(&tree_node->lock) != 0) {
+        syserr("syserr occurred");
+    }
     free(tree_node);
 }
 
 void tree_free(Tree* tree) {
     tree_free_node(tree->root);
-    //todo: obsługa błędu
-    pthread_mutex_destroy(&tree->move_mutex);
+    if (pthread_mutex_destroy(&tree->move_mutex) != 0) {
+        syserr("syserr occurred");
+    }
 }
 
 // Zwraca wskaźnik na znaleziony węzeł, jeżeli istnieje, wpp. zwraca NULL.
@@ -207,7 +208,6 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 rwlock_after_read(&source_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
                 rwlock_after_read(&target_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
                 pthread_mutex_lock(&tree->move_mutex);
-                // todo: zakleszcza się gdy source_parent_tree == target_parent_tree
                 rwlock_before_write(&source_parent_tree->lock);
                 if (source_parent_tree != target_parent_tree) {
                     rwlock_before_write(&target_parent_tree->lock);
