@@ -4,11 +4,11 @@
 
 int rwlock_init(ReadWriteLock *rw) {
     int err;
-    if ((err = pthread_mutex_init(&rw->mutex, 0)) != 0)
+    if ((err = pthread_mutex_init(&rw->mutex, NULL)) != 0)
         return err;
-    if ((err = pthread_cond_init(&rw->readers, 0)) != 0)
+    if ((err = pthread_cond_init(&rw->readers, NULL)) != 0)
         return err;
-    if ((err = pthread_cond_init(&rw->writers, 0)) != 0)
+    if ((err = pthread_cond_init(&rw->writers, NULL)) != 0)
         return err;
     rw->n_readers_waiting = rw->n_writers_waiting = rw->n_reading = rw->n_writing = rw->change = 0;
     return 0;

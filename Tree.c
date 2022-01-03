@@ -1,11 +1,10 @@
-// todo: poczytać doc o mutexach i zmienić to 0 na NULL
-
-// todo: komentarz
 // autor: Mateusz Malinowski (mm429561)
-// W zadaniu występuje problem analogiczny jak "czytelnicy i pisarze". Rolę
-// czytelników pełnią funkcje `tree_list` i `tree_find`, a rolę pisarzy
-// `tree_create`, `tree_remove` i `tree_move`. Do synchronizacji używam zamków,
-// podobnie jak w małym zadaniu nr 8.
+// W zadaniu występuje problem "czytelnicy i pisarze". Rolę czytelników pełnią
+// funkcje `tree_list` i `tree_find`, a rolę pisarzy `tree_create`,
+// `tree_remove` i `tree_move`. Do synchronizacji używam zamków, podobnie jak w
+// małym zadaniu nr 8. Dodatkowo `tree_move` ingeruje w dwa węzły, więc musi
+// założyć dwa zamki. Aby uniknąć zakleszczenia, używam dodatkowego mutexa, w
+// celu założenia obu zamków atomowo.
 
 #include "Tree.h"
 #include "HashMap.h"
@@ -37,8 +36,6 @@ typedef struct {
 
 struct Tree {
     TreeNode* root;
-    // `tree_move` ingeruje w dwa węzły, więc musi założyć dwa zamki. Aby uniknąć
-    // zakleszczenia, używam mutexa, w celu założenia obu zamków atomowo.
     pthread_mutex_t move_mutex;
 };
 
@@ -57,7 +54,7 @@ Tree* tree_new() {
     Tree* tree = malloc(sizeof (Tree));
     CHECK_PTR(tree);
     //todo: może lepsza obsługa błędu?
-    if (pthread_mutex_init(&tree->move_mutex, 0) != 0) {
+    if (pthread_mutex_init(&tree->move_mutex, NULL) != 0) {
         free(tree);
         return NULL;
     }
