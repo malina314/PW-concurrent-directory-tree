@@ -62,7 +62,7 @@ static inline void tree_free_node(TreeNode* tree_node) {
     while (hmap_next(tree_node->subfolders, &it, &key, &subtree)) {
      tree_free_node(subtree);
     }
-    free(tree_node->subfolders);
+    hmap_free(tree_node->subfolders);
     if (rwlock_destroy(&tree_node->lock) != 0) {
         syserr("syserr occurred");
     }
@@ -74,6 +74,7 @@ void tree_free(Tree* tree) {
     if (pthread_mutex_destroy(&tree->move_mutex) != 0) {
         syserr("syserr occurred");
     }
+    free(tree);
 }
 
 // Zwraca wskaźnik na znaleziony węzeł, jeżeli istnieje, wpp. zwraca NULL.
