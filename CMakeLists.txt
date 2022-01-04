@@ -24,7 +24,8 @@ project(MIMUW-FORK C)
 
 set(CMAKE_C_STANDARD "11")
 
-set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-sign-compare")
+#set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-sign-compare")
+set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-sign-compare -g")
 
 #
 #add_library(err err.c)
@@ -50,7 +51,7 @@ add_executable(bez_sanitizerow
         "${TESTS_PATH}utils.c"
         "${TESTS_PATH}valid_path.c"
         "${TESTS_PATH}sequential_small.c"
-        "${TESTS_PATH}sequential_big_random.c"
+#        "${TESTS_PATH}sequential_big_random.c"
         "${TESTS_PATH}deadlock.c"
         "${TESTS_PATH}concurrent_same_as_some_sequential.c"
         "${TESTS_PATH}liveness.c"
@@ -61,26 +62,3 @@ add_executable(bez_sanitizerow
         Tree.c)
 
 target_link_libraries(bez_sanitizerow pthread)
-
-
-add_executable(z_sanitizerami
-        "${TESTS_PATH}test.c"
-        "${TESTS_PATH}utils.c"
-        "${TESTS_PATH}valid_path.c"
-        "${TESTS_PATH}sequential_small.c"
-        "${TESTS_PATH}sequential_big_random.c"
-        "${TESTS_PATH}deadlock.c"
-        "${TESTS_PATH}concurrent_same_as_some_sequential.c"
-        "${TESTS_PATH}liveness.c"
-        err.c
-        HashMap.c
-        path_utils.c
-        ReadWriteLock.c
-        Tree.c)
-
-target_compile_options(z_sanitizerami PRIVATE "-fsanitize=undefined")
-target_compile_options(z_sanitizerami PRIVATE "-fsanitize=address")
-target_compile_options(z_sanitizerami PRIVATE "-g")
-
-target_link_libraries(z_sanitizerami pthread asan static-libasan)
-
