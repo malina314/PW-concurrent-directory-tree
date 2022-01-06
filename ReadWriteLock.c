@@ -75,7 +75,7 @@ int rwlock_before_read(ReadWriteLock *rw) {
     while (rw->n_writing > 0 || rw->n_writers_waiting > 0) {
         if ((err = pthread_cond_wait(&rw->readers, &rw->mutex)) != 0)
             return err;
-        if (rw->change == 1) {
+        if (rw->change == 1 && rw->n_writing == 0) {
             rw->change = 0;
             break;
         }
