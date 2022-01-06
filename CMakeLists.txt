@@ -51,11 +51,10 @@ add_executable(bez_sanitizerow
         "${TESTS_PATH}utils.c"
         "${TESTS_PATH}valid_path.c"
         "${TESTS_PATH}sequential_small.c"
-#        "${TESTS_PATH}sequential_big_random.c"
+        "${TESTS_PATH}sequential_big_random.c"
         "${TESTS_PATH}deadlock.c"
         "${TESTS_PATH}concurrent_same_as_some_sequential.c"
         "${TESTS_PATH}liveness.c"
-        err.c
         HashMap.c
         path_utils.c
         ReadWriteLock.c

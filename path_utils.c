@@ -1,5 +1,5 @@
 #include "path_utils.h"
-#include "err.h"
+#include "checks.h"
 
 #include <assert.h>
 #include <stdio.h>

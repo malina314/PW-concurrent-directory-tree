@@ -1,3 +1,5 @@
+// todo: usunąć wykomentowany kod
+
 // autor: Mateusz Malinowski (mm429561)
 // W zadaniu występuje problem "czytelnicy i pisarze". Rolę czytelników pełnią
 // funkcje `tree_list` i `tree_find`, a rolę pisarzy `tree_create`,
@@ -10,13 +12,13 @@
 #include "HashMap.h"
 #include "path_utils.h"
 #include "ReadWriteLock.h"
-#include "err.h"
+#include "checks.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <pthread.h>
+//#include <pthread.h> // todo: usunąć
 
 // Błąd oznaczający, że `target` jest w poddrzewie `source`.
 #define EINVALIDTARGET -1
@@ -29,27 +31,26 @@ typedef struct {
 
 struct Tree {
     TreeNode* root;
-    pthread_mutex_t move_mutex;
+//    pthread_mutex_t move_mutex;
+    ReadWriteLock move_lock;
 };
 
 // Tworzy nowy węzeł drzewa.
 static inline TreeNode* tree_new_node() {
-    TreeNode* node = malloc(sizeof (TreeNode));
-    CHECK_PTR(node);
-    node->subfolders = hmap_new();
-    CHECK_PTR(node->subfolders);
-    if (rwlock_init(&node->lock) != 0) {
-        syserr("syserr occurred");
-    }
+    TreeNode* node;
+    CHECK_PTR(node = malloc(sizeof (TreeNode)));
+    CHECK_PTR(node->subfolders = hmap_new());
+    CHECK_SYSERR(rwlock_init(&node->lock) != 0);
     return node;
 }
 
 Tree* tree_new() {
-    Tree* tree = malloc(sizeof (Tree));
-    CHECK_PTR(tree);
-    if (pthread_mutex_init(&tree->move_mutex, NULL) != 0) {
-        syserr("syserr occurred");
-    }
+    Tree* tree;
+    CHECK_PTR(tree = malloc(sizeof (Tree)));
+//    if (pthread_mutex_init(&tree->move_mutex, NULL) != 0) {
+//        syserr("syserr occurred");
+//    }
+    CHECK_SYSERR(rwlock_init(&tree->move_lock) != 0);
     tree->root = tree_new_node();
     return tree;
 }
@@ -63,17 +64,16 @@ static inline void tree_free_node(TreeNode* tree_node) {
      tree_free_node(subtree);
     }
     hmap_free(tree_node->subfolders);
-    if (rwlock_destroy(&tree_node->lock) != 0) {
-        syserr("syserr occurred");
-    }
+    CHECK_SYSERR(rwlock_destroy(&tree_node->lock) != 0);
     free(tree_node);
 }
 
 void tree_free(Tree* tree) {
     tree_free_node(tree->root);
-    if (pthread_mutex_destroy(&tree->move_mutex) != 0) {
-        syserr("syserr occurred");
-    }
+//    if (pthread_mutex_destroy(&tree->move_mutex) != 0) {
+//        syserr("syserr occurred");
+//    }
+    CHECK_SYSERR(rwlock_init(&tree->move_lock) != 0);
     free(tree);
 }
 
@@ -85,15 +85,15 @@ static TreeNode* tree_find(TreeNode* tree_node, const char* path) {
     if (strcmp(path, "/") == 0) {
         // Zakładamy zamek, który zostanie zwolniony przez funkcję, która
         // wywołała `tree_find`.
-        rwlock_before_read(&tree_node->lock);
+        CHECK_SYSERR(rwlock_before_read(&tree_node->lock));
         return tree_node;
     }
-    char* component = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-    CHECK_PTR(component);
+    char* component;
+    CHECK_PTR(component = malloc(MAX_FOLDER_NAME_LENGTH + 1));
     path = split_path(path, component);
-    rwlock_before_read(&tree_node->lock);
+    CHECK_SYSERR(rwlock_before_read(&tree_node->lock));
     TreeNode* subtree = hmap_get(tree_node->subfolders, component);
-    rwlock_after_read(&tree_node->lock);
+    CHECK_SYSERR(rwlock_after_read(&tree_node->lock));
     free(component);
     return tree_find(subtree, path);
 }
@@ -101,12 +101,15 @@ static TreeNode* tree_find(TreeNode* tree_node, const char* path) {
 char* tree_list(Tree* tree, const char* path) {
     TreeNode* tree_node = tree->root;
     if (is_path_valid(path)) {
+        CHECK_SYSERR(rwlock_before_read(&tree->move_lock));
         tree_node = tree_find(tree_node, path);
         if (tree_node) {
             char* list = make_map_contents_string(tree_node->subfolders);
-            rwlock_after_read(&tree_node->lock); // Zwalniamy zamek z `tree_find`.
+            CHECK_SYSERR(rwlock_after_read(&tree_node->lock)); // Zwalniamy zamek z `tree_find`).
+            CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
             return list;
         }
+        CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
     }
     return NULL;
 }
@@ -117,22 +120,26 @@ int tree_create(Tree* tree, const char* path) {
         return EEXIST;
     }
     if (is_path_valid(path)) {
-        char* new_subfolder_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-        CHECK_PTR(new_subfolder_name);
+        CHECK_SYSERR(rwlock_before_read(&tree->move_lock));
+        char* new_subfolder_name;
+        CHECK_PTR(new_subfolder_name = malloc(MAX_FOLDER_NAME_LENGTH + 1));
         char* parent_path = make_path_to_parent(path, new_subfolder_name);
         tree_node = tree_find(tree_node, parent_path);
         if (tree_node) {
-            rwlock_after_read(&tree_node->lock); // Zwalniamy zamek z `tree_find`.
-            rwlock_before_write(&tree_node->lock);
+            CHECK_SYSERR(rwlock_after_read(&tree_node->lock)); // Zwalniamy zamek z `tree_find`).
+            CHECK_SYSERR(rwlock_before_write(&tree_node->lock));
             if (hmap_get(tree_node->subfolders, new_subfolder_name) == NULL) {
                 TreeNode* new_subfolder = tree_new_node();
                 hmap_insert(tree_node->subfolders, new_subfolder_name, new_subfolder);
-                rwlock_after_write(&tree_node->lock);
+                CHECK_SYSERR(rwlock_after_write(&tree_node->lock));
+                CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
                 return 0;
             }
-            rwlock_after_write(&tree_node->lock);
+            CHECK_SYSERR(rwlock_after_write(&tree_node->lock));
+            CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
             return EEXIST;
         }
+        CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
         return ENOENT;
     }
     return EINVAL;
@@ -144,37 +151,41 @@ int tree_remove(Tree* tree, const char* path) {
         return EBUSY;
     }
     if (is_path_valid(path)) {
-        char* subfolder_to_remove = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-        CHECK_PTR(subfolder_to_remove);
+        CHECK_SYSERR(rwlock_before_read(&tree->move_lock));
+        char* subfolder_to_remove;
+        CHECK_PTR(subfolder_to_remove = malloc(MAX_FOLDER_NAME_LENGTH + 1));
         char* parent_path = make_path_to_parent(path, subfolder_to_remove);
         tree_node = tree_find(tree_node, parent_path);
         if (tree_node) {
             TreeNode* to_remove = hmap_get(tree_node->subfolders, subfolder_to_remove);
-            rwlock_after_read(&tree_node->lock); // Zwalniamy zamek z `tree_find`.
-            rwlock_before_write(&tree_node->lock);
+            CHECK_SYSERR(rwlock_after_read(&tree_node->lock)); // Zwalniamy zamek z `tree_find`).
+            CHECK_SYSERR(rwlock_before_write(&tree_node->lock));
             if (to_remove) {
                 // Usuwamy krawędź, żeby nikt więcej nie wszedł to `to_remove`.
                 hmap_remove(tree_node->subfolders, subfolder_to_remove);
-                rwlock_before_write(&to_remove->lock);
+                CHECK_SYSERR(rwlock_before_write(&to_remove->lock));
                 // Mamy zamek i nikt więcej nie wejdzie, więc nikt nie czeka na
                 // żadnej zmiennej warunkowej.
                 // todo: czy na pewno żaden czytelnik nie czeka?
                 if (hmap_size(to_remove->subfolders) == 0) {
                     hmap_free(to_remove->subfolders);
-                    rwlock_after_write(&to_remove->lock);
-                    rwlock_destroy(&to_remove->lock);
+                    CHECK_SYSERR(rwlock_after_write(&to_remove->lock));
+                    CHECK_SYSERR(rwlock_destroy(&to_remove->lock));
                     free(to_remove);
-                    rwlock_after_write(&tree_node->lock);
+                    CHECK_SYSERR(rwlock_after_write(&tree_node->lock));
+                    CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
                     return 0;
                 }
                 // Nie mogliśmy usunąć, więc przywracamy usuniętą krawędź.
                 hmap_insert(tree_node->subfolders, subfolder_to_remove, to_remove);
-                rwlock_after_write(&to_remove->lock);
-                rwlock_after_write(&tree_node->lock);
+                CHECK_SYSERR(rwlock_after_write(&to_remove->lock));
+                CHECK_SYSERR(rwlock_after_write(&tree_node->lock));
+                CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
                 return ENOTEMPTY;
             }
-            rwlock_after_write(&tree_node->lock);
+            CHECK_SYSERR(rwlock_after_write(&tree_node->lock));
         }
+        CHECK_SYSERR(rwlock_after_read(&tree->move_lock));
         return ENOENT;
     }
     return EINVAL;
@@ -194,24 +205,24 @@ int tree_move(Tree* tree, const char* source, const char* target) {
         return EEXIST;
     }
     if (is_path_valid(source) && is_path_valid(target)) {
-        char* source_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-        CHECK_PTR(source_name);
+        CHECK_SYSERR(rwlock_before_write(&tree->move_lock));
+        char* source_name;
+        CHECK_PTR(source_name = malloc(MAX_FOLDER_NAME_LENGTH + 1));
         char* source_parent_path = make_path_to_parent(source, source_name);
         TreeNode* source_parent_tree = tree_find(tree_node, source_parent_path);
         if (source_parent_tree) {
-            char* target_name = malloc(MAX_FOLDER_NAME_LENGTH + 1);
-            CHECK_PTR(target_name);
+            char* target_name;
+            CHECK_PTR(target_name = malloc(MAX_FOLDER_NAME_LENGTH + 1));
             char* target_parent_path = make_path_to_parent(target, target_name);
             TreeNode* target_parent_tree = tree_find(tree_node, target_parent_path);
             if (target_parent_tree) {
                 TreeNode* to_move = hmap_get(source_parent_tree->subfolders, source_name);
-                //todo: obsługa błędów
-                rwlock_after_read(&source_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
-                rwlock_after_read(&target_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
-                pthread_mutex_lock(&tree->move_mutex);
-                rwlock_before_write(&source_parent_tree->lock);
+                CHECK_SYSERR(rwlock_after_read(&source_parent_tree->lock)); // Zwalniamy zamek z `tree_find`).
+                CHECK_SYSERR(rwlock_after_read(&target_parent_tree->lock)); // Zwalniamy zamek z `tree_find`).
+//                pthread_mutex_lock(&tree->move_mutex);
+                CHECK_SYSERR(rwlock_before_write(&source_parent_tree->lock));
                 if (source_parent_tree != target_parent_tree) {
-                    rwlock_before_write(&target_parent_tree->lock);
+                    CHECK_SYSERR(rwlock_before_write(&target_parent_tree->lock));
                 }
                 int return_value = 0;
                 if (to_move) {
@@ -230,16 +241,17 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 } else {
                     return_value = ENOENT;
                 }
-                //todo: obsługa błędów
-                rwlock_after_write(&target_parent_tree->lock);
+                CHECK_SYSERR(rwlock_after_write(&target_parent_tree->lock));
                 if (source_parent_tree != target_parent_tree) {
-                    rwlock_after_write(&source_parent_tree->lock);
+                    CHECK_SYSERR(rwlock_after_write(&source_parent_tree->lock));
                 }
-                pthread_mutex_unlock(&tree->move_mutex);
+//                pthread_mutex_unlock(&tree->move_mutex);
+                CHECK_SYSERR(rwlock_after_write(&tree->move_lock));
                 return return_value;
             }
-            rwlock_after_read(&source_parent_tree->lock); // Zwalniamy zamek z `tree_find`.
+            CHECK_SYSERR(rwlock_after_read(&source_parent_tree->lock)); // Zwalniamy zamek z `tree_find`.
         }
+        CHECK_SYSERR(rwlock_after_write(&tree->move_lock));
         return ENOENT;
     }
     return EINVAL;
