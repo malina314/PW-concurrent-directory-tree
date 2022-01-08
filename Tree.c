@@ -1,4 +1,3 @@
-// todo: usunąć wykomentowany kod
 // todo: zwiększyć współbieżność move jak już będzie działało
 
 // todo: poprawić ten komentarz na temat mutexa w rootcie
@@ -20,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-//#include <pthread.h> // todo: usunąć
 
 // Błąd oznaczający, że `target` jest w poddrzewie `source`.
 #define EINVALIDTARGET -1
@@ -33,7 +31,6 @@ typedef struct {
 
 struct Tree {
     TreeNode* root;
-//    pthread_mutex_t move_mutex;
     ReadWriteLock special_lock;
 };
 
@@ -49,9 +46,6 @@ static inline TreeNode* tree_new_node() {
 Tree* tree_new() {
     Tree* tree;
     CHECK_PTR(tree = malloc(sizeof (Tree)));
-//    if (pthread_mutex_init(&tree->move_mutex, NULL) != 0) {
-//        syserr("syserr occurred");
-//    }
     CHECK_SYSERR(rwlock_init(&tree->special_lock) != 0);
     tree->root = tree_new_node();
     return tree;
@@ -72,9 +66,6 @@ static inline void tree_free_node(TreeNode* tree_node) {
 
 void tree_free(Tree* tree) {
     tree_free_node(tree->root);
-//    if (pthread_mutex_destroy(&tree->move_mutex) != 0) {
-//        syserr("syserr occurred");
-//    }
     CHECK_SYSERR(rwlock_init(&tree->special_lock) != 0);
     free(tree);
 }
@@ -168,7 +159,6 @@ int tree_remove(Tree* tree, const char* path) {
                 CHECK_SYSERR(rwlock_before_write(&to_remove->lock));
                 // Mamy zamek i nikt więcej nie wejdzie, więc nikt nie czeka na
                 // żadnej zmiennej warunkowej.
-                // todo: czy na pewno żaden czytelnik nie czeka?
                 if (hmap_size(to_remove->subfolders) == 0) {
                     hmap_free(to_remove->subfolders);
                     CHECK_SYSERR(rwlock_after_write(&to_remove->lock));
@@ -221,15 +211,12 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 TreeNode* to_move = hmap_get(source_parent_tree->subfolders, source_name);
                 CHECK_SYSERR(rwlock_after_read(&source_parent_tree->lock)); // Zwalniamy zamek z `tree_find`.
                 CHECK_SYSERR(rwlock_after_read(&target_parent_tree->lock)); // Zwalniamy zamek z `tree_find`.
-//                pthread_mutex_lock(&tree->move_mutex); // todo: usunąć
                 CHECK_SYSERR(rwlock_before_write(&source_parent_tree->lock));
                 if (source_parent_tree != target_parent_tree) {
                     CHECK_SYSERR(rwlock_before_write(&target_parent_tree->lock));
                 }
                 int return_value = 0;
                 if (to_move) {
-                    // todo: Jeśli folder target już istnieje, zwraca kod błędu EEXIST.
-                    //  może jednak to nie jest poprawne?
                     if (strcmp(source, target) == 0) {
                         return_value = 0;
                     } else if (is_prefix(source, target)) {
@@ -247,7 +234,6 @@ int tree_move(Tree* tree, const char* source, const char* target) {
                 if (source_parent_tree != target_parent_tree) {
                     CHECK_SYSERR(rwlock_after_write(&source_parent_tree->lock));
                 }
-//                pthread_mutex_unlock(&tree->move_mutex); // todo: usunąć
                 CHECK_SYSERR(rwlock_after_write(&tree->special_lock));
                 return return_value;
             }
