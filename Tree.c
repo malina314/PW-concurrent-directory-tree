@@ -66,7 +66,7 @@ static inline void tree_free_node(TreeNode* tree_node) {
 
 void tree_free(Tree* tree) {
     tree_free_node(tree->root);
-    CHECK_SYSERR(rwlock_init(&tree->special_lock) != 0);
+    CHECK_SYSERR(rwlock_destroy(&tree->special_lock) != 0);
     free(tree);
 }
 
