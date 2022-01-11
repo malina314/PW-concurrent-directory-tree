@@ -1,5 +1,3 @@
-# todo: dodać w nim ReadWriteLock.c i path_utils.c do `add_library(Tree Tree.c)`
-
 cmake_minimum_required(VERSION 3.8)
 project(MIMUW-FORK C)
 
