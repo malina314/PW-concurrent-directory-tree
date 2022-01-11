@@ -1,13 +1,10 @@
-// todo: zwiększyć współbieżność move jak już będzie działało
-
-// todo: poprawić ten komentarz na temat mutexa w rootcie
-// autor: Mateusz Malinowski (mm429561)
+// Autor: Mateusz Malinowski (mm429561)
 // W zadaniu występuje problem "czytelnicy i pisarze". Rolę czytelników pełnią
 // funkcje `tree_list` i `tree_find`, a rolę pisarzy `tree_create`,
 // `tree_remove` i `tree_move`. Do synchronizacji używam zamków, podobnie jak w
-// małym zadaniu nr 8. Dodatkowo `tree_move` ingeruje w dwa węzły, więc musi
-// założyć dwa zamki. Aby uniknąć zakleszczenia, używam dodatkowego mutexa, w
-// celu założenia obu zamków atomowo.
+// małym zadaniu nr 8. Funkcje `tree_remove` i `tree_move` korzystają
+// z dodatkowego zamka w korzeniu, aby zapewnić bezpieczeństwo usuwania
+// i przenoszenia folderów.
 
 #include "Tree.h"
 #include "HashMap.h"
@@ -16,9 +13,8 @@
 #include "checks.h"
 
 #include <errno.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // Błąd oznaczający, że `target` jest w poddrzewie `source`.
 #define EINVALIDTARGET -1
